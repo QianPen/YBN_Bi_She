@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频质量评估系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #10b981;
+            --background-color: #ffffff;
+            --text-color: #1f2937;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #60a5fa;
+            --secondary-color: #34d399;
+            --background-color: #1f2937;
+            --text-color: #f3f4f6;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .upload-container {
+            border: 2px dashed var(--primary-color);
+            transition: all 0.3s ease;
+        }
+
+        .upload-container:hover {
+            border-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .result-container {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .result-container.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .loading {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- 主题切换按钮 -->
+    <button id="themeToggle" class="fixed top-4 right-4 p-2 rounded-full bg-gray-200 dark:bg-gray-700">
+        <i class="ri-sun-line text-xl dark:hidden"></i>
+        <i class="ri-moon-line text-xl hidden dark:block"></i>
+    </button>
+
+    <!-- 主要内容 -->
+    <div class="container mx-auto px-4 py-16">
+        <div class="max-w-4xl mx-auto">
+            <!-- 标题部分 -->
+            <div class="text-center mb-16">
+                <h1 class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent">
+                    音频质量评估系统
+                </h1>
+                <p class="text-lg text-gray-600 dark:text-gray-300">
+                    上传您的音频文件，获取专业的质量评估报告
+                </p>
+            </div>
+
+            <!-- 上传区域 -->
+            <div class="upload-container rounded-2xl p-8 md:p-12 text-center mb-8">
+                <div class="mb-6">
+                    <i class="ri-upload-cloud-2-line text-6xl text-blue-500"></i>
+                </div>
+                <h2 class="text-2xl font-semibold mb-4">上传音频文件</h2>
+                <p class="text-gray-600 dark:text-gray-300 mb-6">
+                    支持 WAV, MP3, OGG 格式
+                </p>
+                <input type="file" id="audioFile" accept=".wav,.mp3,.ogg" class="hidden">
+                <button onclick="document.getElementById('audioFile').click()" 
+                        class="btn-primary text-white px-6 py-3 rounded-lg inline-flex items-center">
+                    <i class="ri-upload-2-line mr-2"></i>
+                    选择文件
+                </button>
+            </div>
+
+            <!-- 结果展示区域 -->
+            <div class="result-container rounded-2xl p-8 bg-white dark:bg-gray-800 shadow-lg">
+                <h2 class="text-2xl font-semibold mb-6">评估结果</h2>
+                <div id="resultContent" class="space-y-4">
+                    <!-- 结果内容将通过 JavaScript 动态填充 -->
+                </div>
+            </div>
+
+            <!-- 加载动画 -->
+            <div id="loadingIndicator" class="hidden text-center py-8">
+                <div class="loading inline-block">
+                    <i class="ri-loader-4-line text-4xl text-blue-500"></i>
+                </div>
+                <p class="mt-4 text-gray-600 dark:text-gray-300">正在分析音频...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 主题切换
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        themeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            const isDark = html.classList.contains('dark');
+            html.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        });
+
+        // 文件上传处理
+        const audioFile = document.getElementById('audioFile');
+        const resultContainer = document.querySelector('.result-container');
+        const resultContent = document.getElementById('resultContent');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        audioFile.addEventListener('change', uploadFile);
+
+        async function uploadFile() {
+            if (!audioFile.files.length) return;
+
+            const file = audioFile.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // 显示加载动画
+            loadingIndicator.classList.remove('hidden');
+            resultContainer.classList.remove('show');
+
+            try {
+                const response = await fetch('/api/evaluate', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                // 隐藏加载动画
+                loadingIndicator.classList.add('hidden');
+
+                // 显示结果
+                resultContainer.classList.add('show');
+                if (data.error) {
+                    resultContent.innerHTML = `
+                        <div class="p-4 rounded-lg bg-red-100 dark:bg-red-900">
+                            <i class="ri-error-warning-line text-red-500 dark:text-red-300 mr-2"></i>
+                            <span class="text-red-700 dark:text-red-200">${data.error}</span>
+                        </div>
+                    `;
+                } else {
+                    if (data.score !== undefined) {
+                        resultContent.innerHTML = `
+                            <div class="p-4 rounded-lg bg-green-100 dark:bg-green-900">
+                                <i class="ri-checkbox-circle-line text-green-500 dark:text-green-300 mr-2"></i>
+                                <span class="text-green-700 dark:text-green-200">评估完成</span>
+                            </div>
+                            <div class="p-6 rounded-lg bg-blue-50 dark:bg-blue-900">
+                                <h3 class="text-xl font-semibold mb-2">音频质量得分</h3>
+                                <p class="text-4xl font-bold text-blue-600 dark:text-blue-300">
+                                    ${data.score.toFixed(4)}
+                                </p>
+                            </div>
+                        `;
+                    } else {
+                        resultContent.innerHTML = `
+                            <div class="p-4 rounded-lg bg-green-100 dark:bg-green-900">
+                                <i class="ri-checkbox-circle-line text-green-500 dark:text-green-300 mr-2"></i>
+                                <span class="text-green-700 dark:text-green-200">评估完成</span>
+                            </div>
+                            <div class="p-6 rounded-lg bg-blue-50 dark:bg-blue-900">
+                                <h3 class="text-xl font-semibold mb-2">音频质量评估</h3>
+                                <p class="text-4xl font-bold text-blue-600 dark:text-blue-300">
+                                    ${data.class === 1 ? '糟糕' : data.class === 2 ? '中等' : '优秀'}
+                                </p>
+                            </div>
+                        `;
+                    }
+                }
+            } catch (error) {
+                loadingIndicator.classList.add('hidden');
+                resultContainer.classList.add('show');
+                resultContent.innerHTML = `
+                    <div class="p-4 rounded-lg bg-red-100 dark:bg-red-900">
+                        <i class="ri-error-warning-line text-red-500 dark:text-red-300 mr-2"></i>
+                        <span class="text-red-700 dark:text-red-200">发生错误: ${error}</span>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html> 
